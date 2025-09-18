@@ -1,27 +1,50 @@
-const express =require("express");
-const {protect} =require("../middleware/authMiddleware")
+const express = require("express");
+const router = express.Router();
+const multer = require("multer");
+const cloudinary = require("cloudinary").v2;
 
-const{
-  registerUser,
-  loginUser,
-  getUserInfo,
-}=require("../controllers/authController");
-const upload = require("../middleware/uploadMiddleware");
-
-const router =express.Router();
-
-router.post("/register",registerUser);
-router.post("/login",loginUser);
-router.get("/getUser",protect,getUserInfo );
-
-router.post("/upload-image",upload.single("image"),(req,res)=>{
-  if(!req.file){
-    return res.status(400).json({message:"No file uploaded"});
-  }
-  const imageUrl=`${req.protocol}://${req.get("host")}/uploads/${req.file.filename}`;
-  res.status(200).json({imageUrl});
+// Multer memory storage
+const storage = multer.memoryStorage();
+const upload = multer({
+  storage,
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
+    if (allowedTypes.includes(file.mimetype)) cb(null, true);
+    else cb(new Error("Only .jpeg, .jpg and .png formats are allowed"), false);
+  },
 });
 
+// Cloudinary config
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
 
+// Upload endpoint
+router.post("/upload-image", upload.single("image"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
 
-module.exports=router;
+    const streamUpload = (fileBuffer) => {
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          { folder: "profile_pics" },
+          (error, result) => {
+            if (result) resolve(result);
+            else reject(error);
+          }
+        );
+        stream.end(fileBuffer);
+      });
+    };
+
+    const result = await streamUpload(req.file.buffer);
+    res.status(200).json({ imageUrl: result.secure_url });
+  } catch (err) {
+    console.error("Upload error:", err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+module.exports = router;
