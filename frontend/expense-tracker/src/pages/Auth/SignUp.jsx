@@ -81,8 +81,15 @@ const SignUp = () => {
 
         <form onSubmit={handleSignUp}>
           <ProfilePhotoSelector image={profilePic} setImage={setProfilePic} />
-          <p className="text-[10px] text-red-500 italic mt-1">
-            Note:Image--Only .jpeg, .jpg and .png formats are allowed</p>
+          <div className="flex flex-col gap-1 mt-1">
+            <p className="text-[10px] text-red-500 italic">
+              Note: Only .jpeg, .jpg, and .png formats are allowed.
+            </p>
+            <p className="text-[10px] text-red-500 italic">
+              Note: Sorry for the inconvenience, image upload is currently not
+              working.
+            </p>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Input
               value={fullName}
