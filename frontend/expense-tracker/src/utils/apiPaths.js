@@ -1,4 +1,4 @@
-export const BASE_URL=import.meta.env.REACT_APP_BASE_URL;
+export const BASE_URL=import.meta.env.VITE_APP_URL;
 
 //utils/apiPath.js
 export const  API_PATHS={
