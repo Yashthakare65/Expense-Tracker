@@ -1,72 +1,86 @@
-const xlsx=require('xlsx');
-const Expense=require("../models/Expense")
+const xlsx = require("xlsx");
+const Expense = require("../models/Expense");
 
-//add expense 
-exports.addExpense=async(req ,res)=>{
-  const userId =req.user.id;
+// Add Expense
+exports.addExpense = async (req, res) => {
+  const userId = req.user.id;
 
-  try{
-    const {icon,category,amount,date}=req.body;
+  try {
+    const { icon, category, amount, date } = req.body;
 
-    //validation check for missing fields
-    if(!category || !amount || !date){
-      return res.status(400).json({message:"All fields are required"})
+    if (!category || !amount || !date) {
+      return res.status(400).json({ message: "All fields are required" });
     }
 
-    const newExpense=new Expense({
+    const newExpense = new Expense({
       userId,
       icon,
       category,
-      date:new Date(date)
+      amount,
+      date: new Date(date),
     });
-    
+
     await newExpense.save();
     res.status(200).json(newExpense);
-  }catch(error){
-    res.status(500),json({message:"Server Error"});
+  } catch (error) {
+    console.error("Error in addExpense:", error.message);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-//get All Expense source
-exports.getAllExpense=async(req ,res)=>{
-  const userId =req.user.id;
-   try{
-    const expense=(await Expense.find({userId})).sort({date:-1});
-    res.json(expense);
-   }catch(error){
-    res.status(500).json({message:"Server Error"})
-   }
+// Get All Expenses
+exports.getAllExpense = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const expenses = await Expense.find({ userId }).sort({ date: -1 });
+    res.json(expenses);
+  } catch (error) {
+    console.error("Error in getAllExpense:", error.message);
+    res.status(500).json({ message: "Server Error" });
+  }
 };
 
-//delete Expense source
-exports.deleteExpense=async(req ,res)=>{
-  try{
+// Delete Expense
+exports.deleteExpense = async (req, res) => {
+  try {
     await Expense.findByIdAndDelete(req.params.id);
-    res.json({message:"Expense deleted successfully"});
-  }catch(error){
-    res.status(500).json({message:"Server Error"});
+    res.json({ message: "Expense deleted successfully" });
+  } catch (error) {
+    console.error("Error in deleteExpense:", error.message);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
-//download Expense Excel 
-exports.downloadExpenseExcel=async(req ,res)=>{
-  const userId=req.user.id;
-  try{
-    const expense=(await Expense.find({userId})).toSorted({date:-1});
+// Download Expense Excel
+exports.downloadExpenseExcel = async (req, res) => {
+  const userId = req.user.id;
+  try {
+    const expenses = await Expense.find({ userId }).sort({ date: -1 });
 
-    //prepare data for excel
-    const data=expense.map((item)=>({
-      Category:item.category,
-      Amount:item.amount,
-      Date:item.date,
+    const data = expenses.map((item) => ({
+      Category: item.category,
+      Amount: item.amount,
+      Date: item.date,
     }));
 
-    const wb=xlsx.utils.book_new();
-    const ws=xlsx.utils.json_to_sheet(data);
-    xlsx.utils.book_append_sheet(wb,ws,"expense");
-    xlsx.writeFile(wb,'expense_details.xlsx');
-    res.download('expense_details.xlsx');
-  }catch(error){
-    res.status(500).json({message:"Server Error"})
+    const wb = xlsx.utils.book_new();
+    const ws = xlsx.utils.json_to_sheet(data);
+    xlsx.utils.book_append_sheet(wb, ws, "Expenses");
+
+    const buffer = xlsx.write(wb, { type: "buffer", bookType: "xlsx" });
+
+    res.setHeader(
+      "Content-Disposition",
+      "attachment; filename=expense_details.xlsx"
+    );
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+
+    res.send(buffer);
+  } catch (error) {
+    console.error("Error in downloadExpenseExcel:", error.message);
+    res.status(500).json({ message: "Server Error" });
   }
 };
