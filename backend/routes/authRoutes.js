@@ -3,29 +3,35 @@ const router = express.Router();
 const multer = require("multer");
 const cloudinary = require("cloudinary").v2;
 
-// Multer memory storage
+// ---------- Multer Memory Storage ----------
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
   fileFilter: (req, file, cb) => {
     const allowedTypes = ["image/jpeg", "image/png", "image/jpg"];
-    if (allowedTypes.includes(file.mimetype)) cb(null, true);
-    else cb(new Error("Only .jpeg, .jpg and .png formats are allowed"), false);
+    if (allowedTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error("Only .jpeg, .jpg and .png formats are allowed"), false);
+    }
   },
 });
 
-// Cloudinary config
+// ---------- Cloudinary Config ----------
 cloudinary.config({
   cloud_name: process.env.CLOUD_NAME,
   api_key: process.env.CLOUD_API_KEY,
   api_secret: process.env.CLOUD_API_SECRET,
 });
 
-// Upload endpoint
+// ---------- Upload Endpoint ----------
 router.post("/upload-image", upload.single("image"), async (req, res) => {
   try {
-    if (!req.file) return res.status(400).json({ message: "No file uploaded" });
+    if (!req.file) {
+      return res.status(400).json({ message: "No file uploaded" });
+    }
 
+    // Upload file buffer to Cloudinary
     const streamUpload = (fileBuffer) => {
       return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(
@@ -43,7 +49,7 @@ router.post("/upload-image", upload.single("image"), async (req, res) => {
     res.status(200).json({ imageUrl: result.secure_url });
   } catch (err) {
     console.error("Upload error:", err);
-    res.status(500).json({ message: err.message });
+    res.status(500).json({ message: err.message || "Image upload failed" });
   }
 });
 
